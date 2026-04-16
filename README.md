@@ -6,8 +6,7 @@ A MERN stack app I built for managing users with role-based access. Has JWT auth
 
 ## Live
 
-- **Frontend:** `https://your-frontend.vercel.app`
-- **Backend:** `https://your-backend.onrender.com`
+- **URL LINK:** `https://user-management-system-liard.vercel.app`
 
 Login with these accounts to test:
 
