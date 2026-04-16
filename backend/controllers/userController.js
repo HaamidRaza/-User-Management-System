@@ -1,5 +1,5 @@
-import { validationResult } from 'express-validator';
-import User from '../models/User.js';
+import { validationResult } from "express-validator";
+import User from "../models/User.js";
 
 // Helper: generate a random temp password
 const generateTempPassword = () => {
@@ -41,7 +41,8 @@ export const getUsers = async (req, res) => {
       .populate("updatedBy", "name email")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     res.json({
       users,

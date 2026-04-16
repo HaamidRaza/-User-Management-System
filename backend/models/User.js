@@ -76,4 +76,9 @@ userSchema.methods.toJSON = function () {
   return obj;
 };
 
+userSchema.index({ name: 'text', email: 'text' }); // For search bar
+userSchema.index({ role: 1 });                     // For role filter
+userSchema.index({ status: 1 });                   // For status filter
+userSchema.index({ createdAt: -1 });               // For sorting by newest
+
 export default mongoose.model('User', userSchema);

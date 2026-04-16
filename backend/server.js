@@ -1,7 +1,8 @@
-import './config/env.js'
+import "./config/env.js";
 import express from "express";
 import "express-async-errors";
 import cors from "cors";
+import https from 'https';
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -25,6 +26,12 @@ app.use(
     credentials: true,
   }),
 );
+
+setInterval(() => {
+  https.get(url, (res) => {
+    console.log(`Self-ping status: ${res.statusCode}`);
+  });
+}, 600000); // 10 minutes
 
 // Body parser
 app.use(express.json());

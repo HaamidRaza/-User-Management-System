@@ -14,6 +14,7 @@ import {
   Mail,
   Calendar,
 } from "lucide-react";
+import useSWR from "swr";
 import { userService } from "../../services/userService";
 import { useAuth } from "../../context/AuthContext";
 import Layout from "../../components/layout/Layout";
@@ -29,10 +30,7 @@ const UserList = () => {
   const { isAdmin, isAdminOrManager } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [users, setUsers] = useState([]);
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
-  const [loading, setLoading] = useState(true);
-
+  // State for filters (initialized from URL)
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [roleFilter, setRoleFilter] = useState(searchParams.get("role") || "");
   const [statusFilter, setStatusFilter] = useState(
@@ -40,31 +38,30 @@ const UserList = () => {
   );
   const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = { page, limit: 10 };
-      if (search) params.search = search;
-      if (roleFilter) params.role = roleFilter;
-      if (statusFilter) params.status = statusFilter;
+  // SWR automatically handles loading, errors, and re-fetching
+  const { data, error, isLoading, mutate } = useSWR(
+    ["/api/users", page, search, roleFilter, statusFilter],
+    () =>
+      userService.getUsers({
+        page,
+        search,
+        role: roleFilter,
+        status: statusFilter,
+        limit: 10,
+      }),
+    {
+      revalidateOnFocus: false,
+      keepPreviousData: true,
+      // Debounce logic: only fetch if user stops typing
+      dedupingInterval: 300,
+    },
+  );
 
-      const data = await userService.getUsers(params);
-      setUsers(data.users);
-      setPagination(data.pagination);
-    } catch (err) {
-      toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, roleFilter, statusFilter]);
+  // Derived data
+  const users = data?.users || [];
+  const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      fetchUsers();
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [fetchUsers]);
-
+  // Update URL when filters change
   useEffect(() => {
     const params = {};
     if (search) params.search = search;
@@ -74,6 +71,11 @@ const UserList = () => {
     setSearchParams(params, { replace: true });
   }, [search, roleFilter, statusFilter, page, setSearchParams]);
 
+  // Handle errors
+  useEffect(() => {
+    if (error) toast.error("Failed to load users");
+  }, [error]);
+
   const handleToggleStatus = async (id, currentStatus) => {
     const isDeactivating = currentStatus === "active";
     if (!window.confirm(isDeactivating ? "Deactivate user?" : "Activate user?"))
@@ -82,12 +84,11 @@ const UserList = () => {
       if (isDeactivating) await userService.deleteUser(id);
       else await userService.updateUser(id, { status: "active" });
       toast.success(`User ${isDeactivating ? "deactivated" : "activated"}`);
-      fetchUsers();
+      mutate(); // This tells SWR to refresh the data
     } catch (err) {
       toast.error("Action failed");
     }
   };
-
   return (
     <Layout>
       <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
@@ -299,7 +300,7 @@ const UserList = () => {
           </div>
 
           {/* Empty State */}
-          {!loading && users.length === 0 && (
+          {!isLoading && users.length === 0 && (
             <div className="py-20 text-center">
               <p className="text-[#61210F]/30 font-bold uppercase tracking-[0.2em] text-xs">
                 No records found
@@ -346,9 +347,7 @@ const ActionButtons = ({
   onToggle,
   isMobile,
 }) => (
-  <div
-    className={`flex items-center gap-1 ${isMobile ? "" : "justify-end"}`}
-  >
+  <div className={`flex items-center gap-1 ${isMobile ? "" : "justify-end"}`}>
     <Link
       to={`/users/${user._id}`}
       className="p-2 text-[#61210F]/60 hover:text-[#61210F] hover:bg-[#F9EDCC] rounded-lg transition-all"
@@ -369,7 +368,7 @@ const ActionButtons = ({
       <button
         onClick={() => onToggle(user._id, user.status)}
         className={`p-2 rounded-lg transition-all cursor-pointer ${user.status === "active" ? "text-[#EA2B1F] hover:bg-[#EA2B1F]/10" : "text-green-600 hover:bg-green-50"}`}
-      > 
+      >
         {user.status === "active" ? (
           <UserX size={18} />
         ) : (
