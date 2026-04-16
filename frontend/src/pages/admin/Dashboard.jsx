@@ -192,7 +192,9 @@ const Dashboard = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <section>
+        <section
+          className={`${!isAdminOrManager ? "lg:col-span-2" : ""}`}
+        >
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#61210F]/40 mb-4 flex items-center gap-2">
             Quick Actions
             <div className="h-px flex-1 bg-[#61210F]/10" />
@@ -221,28 +223,28 @@ const Dashboard = () => {
               />
             )}
           </div>
-        </section>
 
-        {!isAdminOrManager && (
-          <section className="bg-[#61210F] rounded-2xl p-6 text-[#F9EDCC] relative overflow-hidden">
-            <div className="relative z-10">
-              <h3 className="text-xl font-bold mb-2">System Notice</h3>
-              <p className="text-[#F9EDCC]/70 text-sm leading-relaxed mb-6">
-                You are currently logged in as a Standard User. If you need
-                elevated permissions to manage other team members, please
-                contact your administrator.
-              </p>
-              <Link
-                to="/profile"
-                className="inline-flex items-center gap-2 bg-[#EA2B1F] px-4 py-2 rounded-lg text-sm font-bold transition-transform hover:scale-105 active:scale-95"
-              >
-                View My Profile <ArrowRight size={16} />
-              </Link>
-            </div>
-            {/* Abstract background shape */}
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          </section>
-        )}
+          {!isAdminOrManager && (
+            <section className="bg-[#61210F] rounded-2xl p-6 mt-4 text-center text-[#F9EDCC] relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-xl font-bold mb-2">System Notice</h3>
+                <p className="text-[#F9EDCC]/70 text-sm leading-relaxed mb-6">
+                  You are currently logged in as a Standard User. If you need
+                  elevated permissions to manage other team members, please
+                  contact your administrator.
+                </p>
+                <Link
+                  to="/profile"
+                  className="inline-flex items-center gap-2 bg-[#EA2B1F] px-4 py-2 rounded-lg text-sm font-bold transition-transform hover:scale-105 active:scale-95"
+                >
+                  View My Profile <ArrowRight size={16} />
+                </Link>
+              </div>
+              {/* Abstract background shape */}
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+            </section>
+          )}
+        </section>
       </div>
     </Layout>
   );
