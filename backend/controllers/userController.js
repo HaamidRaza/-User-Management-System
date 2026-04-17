@@ -15,24 +15,26 @@ export const getUsers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Build filter query
     const filter = {};
 
-    if (req.query.role) filter.role = req.query.role;
+    // Role filter — Managers can filter by role, but never see admins
+    if (req.user.role === "manager") {
+      if (req.query.role && req.query.role !== "admin") {
+        filter.role = req.query.role;
+      } else {
+        filter.role = { $ne: "admin" };
+      }
+    } else if (req.query.role) {
+      filter.role = req.query.role;
+    }
+
     if (req.query.status) filter.status = req.query.status;
+
     if (req.query.search) {
       filter.$or = [
         { name: { $regex: req.query.search, $options: "i" } },
         { email: { $regex: req.query.search, $options: "i" } },
       ];
-    }
-
-    if (req.user.role === "manager") {
-      filter.role = { $ne: "admin" }; // safe — remove the req.query.role assignment above for managers
-    }
-    // Change the query.role block to:
-    if (req.query.role && req.user.role !== "manager") {
-      filter.role = req.query.role;
     }
 
     const total = await User.countDocuments(filter);
@@ -71,19 +73,19 @@ export const getUserStats = async (req, res) => {
         admins: [{ $match: { role: "admin" } }, { $count: "count" }],
         managers: [{ $match: { role: "manager" } }, { $count: "count" }],
         users: [{ $match: { role: "user" } }, { $count: "count" }],
-      }
-    }
+      },
+    },
   ]);
 
   const format = (key) => stats[0][key][0]?.count || 0;
 
   res.json({
-    total: format('total'),
-    active: format('active'),
-    inactive: format('inactive'),
-    admins: format('admins'),
-    managers: format('managers'),
-    users: format('users')
+    total: format("total"),
+    active: format("active"),
+    inactive: format("inactive"),
+    admins: format("admins"),
+    managers: format("managers"),
+    users: format("users"),
   });
 };
 

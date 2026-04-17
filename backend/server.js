@@ -2,7 +2,8 @@ import "./config/env.js";
 import express from "express";
 import "express-async-errors";
 import cors from "cors";
-import https from 'https';
+import cron from "node-cron";
+import https from "https";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -27,11 +28,10 @@ app.use(
   }),
 );
 
-setInterval(() => {
-  https.get(url, (res) => {
-    console.log(`Self-ping status: ${res.statusCode}`);
-  });
-}, 600000); // 10 minutes
+// run every 5 minutes
+cron.schedule("*/5 * * * *", () => {
+  console.log("Task executed at", new Date().toLocaleString());
+});
 
 // Body parser
 app.use(express.json());

@@ -2,10 +2,14 @@ import api from "./api";
 
 export const userService = {
   getUsers: async (params = {}) => {
-    const { data } = await api.get("/users", { params });
+    // Remove empty string/null/undefined values so they don't get sent as role=&status=
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== "" && v != null),
+    );
+    const { data } = await api.get("/users", { params: cleanParams });
     return data;
   },
-  
+
   getStats: async () => {
     const { data } = await api.get("/users/stats");
     return data;

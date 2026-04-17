@@ -1,9 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Search,
   UserPlus,
-  Filter,
   MoreHorizontal,
   UserCheck,
   UserX,
@@ -30,48 +29,44 @@ const UserList = () => {
   const { isAdmin, isAdminOrManager } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // State for filters (initialized from URL)
   const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [roleFilter, setRoleFilter] = useState(searchParams.get("role") || "");
   const [statusFilter, setStatusFilter] = useState(
     searchParams.get("status") || "",
   );
   const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
 
-  // SWR automatically handles loading, errors, and re-fetching
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const { data, error, isLoading, mutate } = useSWR(
-    ["/api/users", page, search, roleFilter, statusFilter],
+    ["/api/users", page, debouncedSearch, roleFilter, statusFilter],
     () =>
       userService.getUsers({
         page,
-        search,
+        search: debouncedSearch,
         role: roleFilter,
         status: statusFilter,
         limit: 10,
       }),
-    {
-      revalidateOnFocus: false,
-      keepPreviousData: true,
-      // Debounce logic: only fetch if user stops typing
-      dedupingInterval: 300,
-    },
+    { revalidateOnFocus: false, keepPreviousData: true },
   );
 
-  // Derived data
   const users = data?.users || [];
   const pagination = data?.pagination || { total: 0, page: 1, pages: 1 };
 
-  // Update URL when filters change
   useEffect(() => {
     const params = {};
-    if (search) params.search = search;
+    if (debouncedSearch) params.search = debouncedSearch;
     if (roleFilter) params.role = roleFilter;
     if (statusFilter) params.status = statusFilter;
     if (page > 1) params.page = page;
     setSearchParams(params, { replace: true });
-  }, [search, roleFilter, statusFilter, page, setSearchParams]);
+  }, [debouncedSearch, roleFilter, statusFilter, page, setSearchParams]);
 
-  // Handle errors
   useEffect(() => {
     if (error) toast.error("Failed to load users");
   }, [error]);
@@ -84,15 +79,15 @@ const UserList = () => {
       if (isDeactivating) await userService.deleteUser(id);
       else await userService.updateUser(id, { status: "active" });
       toast.success(`User ${isDeactivating ? "deactivated" : "activated"}`);
-      mutate(); // This tells SWR to refresh the data
+      mutate();
     } catch (err) {
       toast.error("Action failed");
     }
   };
+
   return (
     <Layout>
       <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
-        {/* Header - Stacks on mobile */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-black text-[#61210F] tracking-tight">
@@ -112,7 +107,6 @@ const UserList = () => {
           )}
         </div>
 
-        {/* Filters - Responsive Grid */}
         <div className="bg-white p-4 rounded-2xl border border-[#61210F]/10 shadow-sm flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
             <Search
@@ -123,7 +117,10 @@ const UserList = () => {
               type="text"
               placeholder="Search identity..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2.5 bg-[#F9EDCC]/10 border border-[#61210F]/5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#EDAE49]"
             />
           </div>
@@ -135,10 +132,10 @@ const UserList = () => {
                 setRoleFilter(e.target.value);
                 setPage(1);
               }}
-              className="flex-1 sm:w-32 bg-white border border-[#61210F]/10 rounded-xl text-xs font-bold uppercase tracking-wider px-3 py-2.5 focus:ring-2 focus:ring-[#EDAE49] outline-none"
+              className="flex-1 sm:w-32 cursor-pointer bg-white border border-[#61210F]/10 rounded-xl text-xs font-bold uppercase tracking-wider px-3 py-2.5 focus:ring-2 focus:ring-[#EDAE49] outline-none"
             >
               <option value="">All Roles</option>
-              <option value="admin">Admin</option>
+              {isAdmin && <option value="admin">Admin</option>}
               <option value="manager">Manager</option>
               <option value="user">User</option>
             </select>
@@ -149,7 +146,7 @@ const UserList = () => {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="flex-1 sm:w-32 bg-white border border-[#61210F]/10 rounded-xl text-xs font-bold uppercase tracking-wider px-3 py-2.5 focus:ring-2 focus:ring-[#EDAE49] outline-none"
+              className="flex-1 sm:w-32 bg-white border cursor-pointer border-[#61210F]/10 rounded-xl text-xs font-bold uppercase tracking-wider px-3 py-2.5 focus:ring-2 focus:ring-[#EDAE49] outline-none"
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
@@ -160,6 +157,7 @@ const UserList = () => {
               <button
                 onClick={() => {
                   setSearch("");
+                  setDebouncedSearch(""); // ✅ also reset debounced value immediately
                   setRoleFilter("");
                   setStatusFilter("");
                   setPage(1);
@@ -172,9 +170,7 @@ const UserList = () => {
           </div>
         </div>
 
-        {/* Mobile View: Cards | Desktop View: Table */}
         <div className="bg-white border border-[#61210F]/10 rounded-2xl overflow-hidden shadow-sm">
-          {/* Table Hidden on Mobile */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -247,7 +243,6 @@ const UserList = () => {
             </table>
           </div>
 
-          {/* Card View Shown only on Mobile */}
           <div className="md:hidden divide-y divide-[#61210F]/5">
             {users.map((u) => (
               <div key={u._id} className="p-5 flex flex-col gap-4">
@@ -299,7 +294,6 @@ const UserList = () => {
             ))}
           </div>
 
-          {/* Empty State */}
           {!isLoading && users.length === 0 && (
             <div className="py-20 text-center">
               <p className="text-[#61210F]/30 font-bold uppercase tracking-[0.2em] text-xs">
@@ -308,8 +302,7 @@ const UserList = () => {
             </div>
           )}
 
-          {/* Pagination Footer - Optimized for small screens */}
-          <div className="px-6 py-5 bg-[#61210F]/[0.02] border-t border-[#61210F]/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="px-6 py-5 bg-[#61210F]/2 border-t border-[#61210F]/5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-[10px] font-bold text-[#61210F]/40 uppercase tracking-widest">
               Records <span className="text-[#61210F]">{users.length}</span> of{" "}
               <span className="text-[#61210F]">{pagination.total}</span>
