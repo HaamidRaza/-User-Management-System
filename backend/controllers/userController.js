@@ -202,7 +202,7 @@ export const updateUser = async (req, res) => {
     if (name !== undefined) updates.name = name;
     if (email !== undefined) updates.email = email;
     if (role !== undefined && requesterRole === "admin") updates.role = role;
-    if (status !== undefined && requesterRole === "admin")
+    if (status !== undefined && (requesterRole === "admin" || (requesterRole === "manager" && targetUser.role !== "admin")))
       updates.status = status;
 
     // Handle password update separately (needs hashing via pre-save hook)
