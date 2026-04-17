@@ -357,7 +357,7 @@ const ActionButtons = ({
         <Edit3 size={18} />
       </Link>
     )}
-    {isAdmin && (
+    {isAdminOrManager && user.role !== "admin" && (
       <button
         onClick={() => onToggle(user._id, user.status)}
         className={`p-2 rounded-lg transition-all cursor-pointer ${user.status === "active" ? "text-[#EA2B1F] hover:bg-[#EA2B1F]/10" : "text-green-600 hover:bg-green-50"}`}
